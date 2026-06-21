@@ -15,3 +15,12 @@ examples/exports/alpha_seq_*.json
 
 # Local machine path pin (machine-specific)
 .bos_platform_path
+
+# LaTeX build artifacts (keep the .pdf, drop the rest)
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.toc
+paper/*.synctex.gz

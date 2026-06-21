@@ -1,0 +1,600 @@
+% ============================================================
+% ropfec: An open, reproducible implementation of
+% reaction-order-polyhedron-constrained flux exponent control.
+%
+% Preprint / methods-paper source. Engine: XeTeX (tectonic) or
+% pdfLaTeX. Build:  tectonic ropfec.tex   (runs bibtex automatically)
+% Bibliography: refs.bib (all entries verified 2026-06-21).
+% ============================================================
+\documentclass[11pt]{article}
+
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true, linkcolor=blue!55!black, citecolor=blue!55!black,
+  urlcolor=blue!55!black, breaklinks=true
+}
+
+\newcommand{\rop}{\mathrm{ROP}}
+\newcommand{\real}{\mathbb{R}}
+
+\title{\textbf{An open, reproducible implementation of\\
+reaction-order-polyhedron--constrained flux exponent control\\
+for closed-loop metabolic network control}}
+
+\author{Lei Zhou\thanks{Zhejiang A\&F University, Hang\-zhou, China.
+Correspondence: \href{mailto:exergyleizhou@gmail.com}{exergyleizhou@gmail.com};
+ORCID 0009-0000-9073-1349.}}
+
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Xiao, Li and Doyle's \emph{flux exponent control} (FEC) and its underlying
+\emph{reaction order polyhedron} (ROP) propose that metabolic dynamics can be
+predicted and controlled directly from network structure: the reaction-order
+exponents of a power-law kinetic model are constrained, by binding
+stoichiometry, to a polyhedron, and dynamic regulation is the solution of an
+optimal-control problem over that polyhedron. The framework is attractive
+because it sidesteps full kinetic-parameter identification, but it has so far
+existed as theory and a model-predictive-control concept without an open,
+tested, reusable implementation, and without a realisation as a deployable
+closed-loop controller. We present \texttt{ropfec}, an open-source Python
+implementation that (i) constructs the ROP H-representation from binding
+stoichiometry and data, (ii) solves ROP-constrained FEC as a nonlinear
+optimal-control problem via CasADi/IPOPT, (iii) adds interval/robust and
+multicellular extensions, and (iv) wraps FEC in a modular
+sense--estimate--optimise--actuate--govern loop with reference component
+implementations (state estimation, Monte-Carlo robustness, policy governance,
+durable workflows). On an in-silico glycolysis-like benchmark, enforcing the
+binding-derived ROP reduces trajectory prediction error by a factor of
+$\sim\!3.2$ (relative error $9.9\%\!\to\!3.1\%$) compared with an exponent
+chosen outside the polyhedron, the FEC solver returns an admissible exponent
+tracking a target flux to within $0.5\%$ of ground truth, and across 50 runs the
+FEC optimal-control policy attains lower final-state tracking cost than
+flux-balance- and Michaelis--Menten--derived exponent policies ($1.01$ vs
+$1.28$ and $1.09$). The implementation ships 29 automated tests and a one-command
+reproduction script. We are explicit about scope: validation is in-silico on a
+single synthetic network with reference (non-production) component stubs; no
+wet-lab data are used. The software is intended as a reproducible reference and
+a substrate for subsequent experimental work.
+\end{abstract}
+
+\noindent\textbf{Keywords:} flux exponent control; reaction order polyhedron;
+metabolic control; optimal control; chemical reaction networks; reproducible
+software; model predictive control.
+
+\tableofcontents
+
+% =====================================================================
+\section{Introduction}
+% =====================================================================
+
+Predicting and controlling the \emph{dynamics} of metabolism from network
+structure is a long-standing goal of systems and synthetic biology. Flux balance
+analysis (FBA) explains steady-state flux distributions from stoichiometry and
+an optimality principle, but it is static and says nothing about
+transients~\citep{orth2010fba}. Mechanistic kinetic models do capture dynamics,
+but require enzyme-by-enzyme rate laws (e.g.\ Michaelis--Menten) and the
+identification of many parameters that are rarely all known.
+
+Xiao, Li and Doyle proposed an alternative that targets the gap between these
+extremes~\citep{xiao2023fec,xiao2022thesis}. Their starting point is that, in a
+power-law (S-system--style) kinetic description, the \emph{reaction orders}
+---the exponents to which species concentrations are raised---are not free
+parameters: binding stoichiometry constrains them to a polyhedron, the
+\emph{reaction order polyhedron} (ROP), whose continuous analogue is the
+log-derivative of the rate with respect to concentration. Flux exponent control
+(FEC) then posits that cells regulate flux \emph{exponents} rather than fluxes
+directly, and that dynamic regulation is the solution of an optimal-control
+problem over the ROP, computationally tractable by model predictive control
+(MPC). Because the admissible exponents come from network structure, FEC can
+predict dynamics---glycolytic oscillations being the motivating example---without
+full kinetic-parameter identification.
+
+This is a compelling abstraction, but to be used and built upon it needs more
+than a derivation. Two practical gaps remain:
+
+\begin{enumerate}
+\item \textbf{No open, reproducible implementation.} There is no released,
+tested software that takes a binding-stoichiometry specification, builds the ROP,
+and solves the ROP-constrained optimal-control problem, so the framework cannot
+easily be reproduced, audited, or extended by others.
+\item \textbf{No closed-loop realisation.} FEC is presented as a predictor /
+MPC concept. Turning it into a controller that can run online---estimating state
+under noise, hedging against parameter uncertainty, and respecting
+resource/safety limits---requires integrating it with estimation, robustness,
+and governance machinery that the original work does not provide.
+\end{enumerate}
+
+\paragraph{Contributions.} We address these gaps with \texttt{ropfec}, an
+open-source implementation and integration of ROP-constrained FEC. Concretely:
+
+\begin{itemize}
+\item[\textbf{C1}] \textbf{A reproducible reference implementation} of ROP
+construction (H-representation from binding stoichiometry and data, with
+projection) and of ROP-constrained FEC as a nonlinear optimal-control problem
+solved with CasADi and IPOPT~\citep{andersson2019casadi,wachter2006ipopt}, with
+deterministic seeds and 29 automated tests.
+\item[\textbf{C2}] \textbf{A modular closed-loop integration} that wraps FEC in
+a sense $\to$ estimate $\to$ optimise $\to$ actuate $\to$ govern loop, with
+reference implementations of the surrounding components (a state observer,
+Monte-Carlo robustness over a digital twin, a policy-governance check, and a
+durable-workflow checkpointer). We are explicit (\S\ref{sec:integration}) that
+these are reference components, not a production platform.
+\item[\textbf{C3}] \textbf{Interval/robust and multicellular extensions} of the
+ROP/FEC formulation, implemented as a robust scenario problem and an
+agent-per-cell model with quorum coupling and a population-level resource
+policy.
+\item[\textbf{C4}] \textbf{An in-silico validation} on a glycolysis-like toy
+network quantifying the value of the ROP constraint and the behaviour of the FEC
+solver, with all numbers regenerated by a single command.
+\end{itemize}
+
+We are deliberately conservative about what this is and is not. The mathematical
+ideas (ROP, FEC, the log-derivative structure) are Xiao et al.'s; our
+contribution is implementation, integration, extension, and reproducible
+in-silico evidence---a methods and software contribution, not a new theory and
+not an empirical biological result. Section~\ref{sec:discussion} states the
+limitations plainly.
+
+% =====================================================================
+\section{Background}\label{sec:background}
+% =====================================================================
+
+We summarise the constructs we implement, following~\citet{xiao2023fec} and
+\citet{xiao2022thesis}; the formulation here is theirs and is restated only to
+fix notation for the implementation.
+
+\paragraph{Power-law kinetics on a CRN.} Consider a chemical reaction network
+(CRN) with $n$ species, concentration vector $x\in\real^n_{\ge 0}$, $m$
+reactions with stoichiometric matrix $N\in\real^{n\times m}$, and power-law
+rates
+\begin{equation}
+v_r(x) = k_r \prod_{i=1}^{n} x_i^{\alpha_{r,i}}, \qquad
+\dot{x} = N\,v(x,\alpha),
+\label{eq:powerlaw}
+\end{equation}
+where $\alpha_{r,i}$ is the reaction order of species $i$ in reaction $r$
+\citep{feinberg2019crnt,alon2019systems}.
+
+\paragraph{Reaction order polyhedron (ROP).} The central observation
+of~\citet{xiao2022thesis} is that the admissible reaction-order vectors are not
+arbitrary: binding stoichiometry and thermodynamic/physical bounds constrain
+$\alpha$ to a polyhedron,
+\begin{equation}
+\rop \;\triangleq\; \bigl\{\, \alpha \in \real^{m\times n} \;\big|\;
+A\,\alpha \le b,\ \alpha \ge 0 \,\bigr\},
+\label{eq:rop}
+\end{equation}
+where the rows of $(A,b)$ encode binding conservation and empirical bounds. Its
+local, continuous analogue is the log-derivative
+\begin{equation}
+L_{r,i}(\alpha) \;\triangleq\; \frac{\partial \log v_r}{\partial \log x_i}
+= \alpha_{r,i},
+\label{eq:logderiv}
+\end{equation}
+which gives the sensitivity of flux to log-concentration directly from the
+geometry, without a Michaelis--Menten quasi-steady-state assumption.
+
+\paragraph{Flux exponent control (FEC).} \citet{xiao2023fec} formulate dynamic
+regulation as control of the exponents subject to the ROP:
+\begin{align}
+\min_{\alpha(\cdot)} \quad & J = \int_0^T \ell\bigl(x(t),f(t),\alpha(t)\bigr)\,dt
+\label{eq:fec_cost}\\
+\text{s.t.} \quad & \dot{x}(t) = N\,v\bigl(x(t),\alpha(t)\bigr), \quad x(0)=x_0,
+\label{eq:fec_dyn}\\
+& \alpha(t) \in \rop\bigl(x(t)\bigr) \quad \forall t,
+\label{eq:fec_rop}\\
+& f(t) = v\bigl(x(t),\alpha(t)\bigr).
+\label{eq:fec_flux}
+\end{align}
+The stage cost $\ell$ typically tracks a reference flux $f^\star$ and penalises
+deviation of $\alpha$ from a nominal value; constraint~\eqref{eq:fec_rop} is what
+ties the controller to network structure. \citet{xiao2023fec} note that this is
+solvable by MPC~\citep{rawlings2017mpc}; \texttt{ropfec} implements it as a
+direct transcription solved by an interior-point NLP solver.
+
+% =====================================================================
+\section{Methods: the \texttt{ropfec} implementation}\label{sec:methods}
+% =====================================================================
+
+\texttt{ropfec} is a small Python package (NumPy/SciPy/CasADi) organised around
+the constructs of \S\ref{sec:background}. Figure~\ref{fig:arch} shows the
+closed-loop architecture; the rest of this section describes each block.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners, align=center, minimum height=8mm,
+              inner sep=4pt, fill=blue!4},
+  gov/.style={draw, rounded corners, align=center, minimum height=8mm,
+              inner sep=4pt, fill=orange!8},
+  >={Stealth[length=2.2mm]}, node distance=7mm and 12mm]
+\node[box] (rop) {ROP build\\ \scriptsize $A\alpha\le b$ from binding $B$ + data};
+\node[box, right=of rop] (fec) {FEC OCP\\ \scriptsize CasADi/IPOPT};
+\node[gov, right=of fec] (opa) {Governance\\ \scriptsize policy check};
+\node[box, right=of opa] (act) {Actuate\\ \scriptsize apply $\alpha$};
+\node[box, below=12mm of fec] (est) {Estimate\\ \scriptsize observer $\hat{x}$};
+\node[box, left=of est] (sense) {Sense\\ \scriptsize plant / digital twin};
+\node[box, right=of est] (mc) {Robustness\\ \scriptsize Monte-Carlo / scenario};
+\node[gov, below=7mm of act, align=center] (wf) {Durable workflow\\ \scriptsize checkpoint};
+
+\draw[->] (rop) -- (fec);
+\draw[->] (fec) -- (opa);
+\draw[->] (opa) -- (act);
+\draw[->] (act) |- (wf.east);
+\draw[->] (sense) -- (est);
+\draw[->] (est) -- node[above,font=\scriptsize]{$\hat{x}$} (mc);
+\draw[->] (est.north) -- (fec.south);
+\draw[->] (mc.north) -- (fec.south east);
+\draw[->] (act.south) |- ([yshift=-3mm]sense.south) -| (sense.south);
+\draw[->] (rop.south) |- (opa.north west);
+\end{tikzpicture}
+\caption{Closed-loop architecture implemented by \texttt{ropfec}. The ROP is
+built once from binding stoichiometry and data and supplies hard constraints
+both to the FEC optimal-control problem and to the governance check. Each
+control step estimates state, optionally hedges over Monte-Carlo / scenario
+samples, solves the ROP-constrained OCP, passes the result through a policy
+check, actuates, and checkpoints. The estimation, robustness, governance and
+workflow blocks are provided as reference implementations
+(\S\ref{sec:integration}).}
+\label{fig:arch}
+\end{figure}
+
+\subsection{ROP construction and projection}\label{sec:ropbuild}
+
+\texttt{rop\_polyhedron.py} builds the H-representation~\eqref{eq:rop} from a
+binding-stoichiometry specification and, optionally, augments it with
+data-driven bounds obtained by log-linear regression of measured rates against
+log-concentrations (the empirical analogue of Eq.~\eqref{eq:logderiv}). The
+resulting \texttt{ROPPolyhedron} object exposes feasibility testing
+($A\alpha\le b$), Euclidean projection $\Pi_{\rop}(\hat\alpha) =
+\arg\min_{\alpha\in\rop}\lVert\alpha-\hat\alpha\rVert$ (a quadratic program), and
+the log-derivative matrix $L=\alpha$. Projection is the mechanism by which any
+externally proposed exponent---from a heuristic, a regression, or a solver
+warm-start---is made physically admissible before use.
+
+\subsection{ROP-constrained FEC as an optimal-control problem}\label{sec:fec}
+
+\texttt{fec\_solver.py} transcribes
+problem~\eqref{eq:fec_cost}--\eqref{eq:fec_flux} into a finite-dimensional NLP.
+The dynamics~\eqref{eq:fec_dyn} are integrated over a horizon $H$; the decision
+variables are the (piecewise-constant) exponents $\alpha$; the ROP
+membership~\eqref{eq:fec_rop} is imposed as the linear constraint set
+$A\alpha\le b$ directly in the solver (\texttt{subject\_to(A @ alpha <= b)}); and
+the objective tracks a reference flux. The NLP is built symbolically with
+CasADi~\citep{andersson2019casadi} and solved with
+IPOPT~\citep{wachter2006ipopt}; a constraint-projection fallback
+(\S\ref{sec:ropbuild}) is used when CasADi/IPOPT are unavailable, so the package
+degrades gracefully. Algorithm~\ref{alg:fec} gives the per-step loop.
+
+\begin{algorithm}[t]
+\caption{ROP-constrained FEC control step}\label{alg:fec}
+\begin{algorithmic}[1]
+\Require current measurement $x_{\text{meas}}$, reference $f^\star$, horizon $H$,
+polyhedron $\rop=(A,b)$
+\State $\hat{x} \gets \textsc{Estimate}(x_{\text{meas}})$
+\Comment{state observer}
+\State $\alpha^\star \gets \arg\min_{\alpha}\ J(\hat{x},f^\star,\alpha)$
+\ \textbf{s.t.}\ $A\alpha\le b$, dynamics~\eqref{eq:fec_dyn}
+\Comment{CasADi/IPOPT}
+\State $\alpha_{\text{safe}} \gets \textsc{Govern}(\alpha^\star)$
+\Comment{policy check; reject/clip if violating}
+\State \textsc{Actuate}$(\alpha_{\text{safe}})$; \textsc{Checkpoint}()
+\State \Return $\alpha_{\text{safe}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Interval/robust extension}\label{sec:robust}
+
+Biological orders and rates are uncertain. \texttt{robust\_extension.py}
+implements an interval ROP $\widetilde{\rop}=\{\alpha\mid \underline{A}\le A\le
+\overline{A},\ \underline{b}\le b\le \overline{b},\ \alpha\in[\underline\alpha,
+\overline\alpha]\}$ and a robust counterpart of FEC,
+\begin{equation}
+\min_{\alpha(\cdot)}\ \sup_{\delta\in\Delta}\ J(x,\alpha;\delta)
+\quad\text{s.t.}\quad \dot{x}=N v(x,\alpha;\delta),\ \
+\alpha(t)\in\widetilde{\rop}(x(t);\delta)\ \forall\delta\in\Delta,
+\label{eq:robust}
+\end{equation}
+solved by a sampled scenario (min--max) approach: scenarios
+$\{\delta^{(k)}\}$ are drawn from a digital twin and the exponent minimising the
+worst-case cost is selected, all kept within the polyhedron.
+
+\subsection{Multicellular agent extension}\label{sec:multicell}
+
+\texttt{multicell\_agent.py} scales the single-cell loop to a consortium. Each
+cell $i$ has local state $x_i$, local polyhedron $\rop_i$ and local FEC; cells
+couple through a diffusible signal $s=\sum_i g(x_i)$ (quorum sensing):
+\begin{equation}
+\dot{x}_i = N_i v_i(x_i,\alpha_i,s),\qquad
+\alpha_i(t)\in\rop_i\bigl(x_i(t),s(t)\bigr),\qquad
+s=\textstyle\sum_i g(x_i).
+\end{equation}
+A population-level resource policy ($\sum_i f_i \le$ carrying capacity) is
+enforced by the governance check, which is the mechanism that prevents a naively
+optimised consortium from exceeding shared limits.
+
+\subsection{Closed-loop integration and its honest scope}\label{sec:integration}
+
+The blocks surrounding the FEC solver in Figure~\ref{fig:arch}---state
+estimation, Monte-Carlo robustness over a digital twin, policy governance, and
+durable-workflow checkpointing---are accessed through narrow interfaces: e.g.\
+\texttt{publish}/\texttt{get}/\texttt{apply\_control} for signals,
+\texttt{Observer.update} for estimation, \texttt{check\_policy} for governance,
+and \texttt{checkpoint}/\texttt{advance} for workflows. The package ships
+\emph{reference implementations} of these interfaces sufficient to run and test
+the full loop end to end.
+
+We state this plainly to avoid overclaiming: \textbf{the results in this paper
+use the self-contained reference components, not a production control platform.}
+The value of the interface design is that each component can be replaced by a
+production observer, sampler, policy engine or workflow runtime without changing
+the FEC core; demonstrating such a deployment is future work.
+
+\subsection{Software, tests and reproducibility}\label{sec:repro}
+
+\texttt{ropfec} runs on Python~3.9 with NumPy, SciPy, CasADi and Matplotlib.
+Randomised components use fixed seeds. The suite of 29 tests
+(Table~\ref{tab:repro}) exercises ROP construction and projection, the FEC
+solver (including the CasADi path and the fallback), the robust and multicellular
+extensions, the FBA/MM benchmark, numerical stability, and the end-to-end loop
+invariants. A single command (\texttt{python examples/run\_all.py}) reruns the
+tests and regenerates every figure and number reported below.
+
+\begin{table}[t]
+\centering
+\caption{Implementation modules and their automated coverage. All 29 tests pass
+on Python~3.9 (CasADi/IPOPT present).}
+\label{tab:repro}
+\begin{tabular}{lll}
+\toprule
+Module & Role (\S) & Test focus \\
+\midrule
+\texttt{rop\_polyhedron.py} & ROP build/project (\ref{sec:ropbuild}) &
+feasibility, projection, log-derivative \\
+\texttt{fec\_solver.py} & FEC OCP (\ref{sec:fec}) &
+CasADi path, fallback, feasibility of $\alpha^\star$ \\
+\texttt{robust\_extension.py} & robust scenario (\ref{sec:robust}) &
+interval ROP, worst-case selection \\
+\texttt{multicell\_agent.py} & consortium (\ref{sec:multicell}) &
+quorum coupling, resource policy \\
+\texttt{benchmarks.py} & baselines (\ref{sec:results}) &
+FBA/MM/FEC/scenario cost, all in ROP \\
+\texttt{bos\_integration.py} & loop glue (\ref{sec:integration}) &
+end-to-end invariants \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =====================================================================
+\section{Results (in-silico)}\label{sec:results}
+% =====================================================================
+
+All results are on a glycolysis-like toy CRN with $n=3$ species
+($G,F,P$) and $m=4$ reactions, the running example of the Xiao
+framework~\citep{xiao2023fec}. The stoichiometry is
+\[
+N=\begin{pmatrix}
+-1 & 0 & 0 & 1\\ 1 & -1 & -2 & 0\\ 0 & 1 & 1 & -1
+\end{pmatrix},
+\]
+the controllable exponents are those of the first three (binding-modulated)
+reactions, and the binding-derived ROP is the $6$-facet polyhedron
+$\{\alpha\mid A\alpha\le b\}$ with, e.g., $\alpha_2\le 2$ and
+$\alpha_0+0.5\,\alpha_2\le 1.8$. We emphasise at the outset that the ``ground
+truth'' is a \emph{synthetic} in-ROP trajectory (binding-limited exponents
+$\alpha_{\text{gt}}=[0.6,0.85,1.7]$): these experiments test the
+\emph{mechanism}---the consequence of respecting vs.\ violating the
+binding-derived constraint---within the model class, not empirical superiority on
+biological data.
+
+\subsection{Enforcing the ROP recovers dynamics; violating it does not}
+
+We compare the synthetic ground-truth trajectory against two predictors: an
+\emph{unconstrained} exponent $\alpha=[0.5,0.8,3.1]$ whose third component lies
+outside the polyhedron ($\alpha_2=3.1>2$), and the same exponent
+\emph{projected onto the ROP}. Figure~\ref{fig:toy} shows the pyruvate
+trajectory. The out-of-polyhedron exponent produces a mean trajectory error of
+$9.9\%$ (relative to ground truth) with visible timing/shape distortion, while
+projecting onto the binding-derived ROP reduces the error to $3.1\%$---a factor
+of $\sim\!3.2$ improvement---purely by respecting the structural constraint. The
+FEC solver, asked to track a target flux, returns the admissible exponent
+$\alpha^\star=[0.6,0.84,1.62]\in\rop$ whose simulated trajectory matches ground
+truth to within $0.5\%$ (final-state error $0.0054$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\textwidth]{figures/toy_traj_comparison.png}
+\caption{In-silico toy dynamics. Pyruvate ($P$) under the synthetic
+ground-truth exponent, an unconstrained exponent that violates the ROP, and the
+FEC/ROP-constrained exponent. Respecting the binding-derived polyhedron recovers
+ground-truth dynamics; violating it does not (mean trajectory error
+$3.1\%$ vs $9.9\%$).}
+\label{fig:toy}
+\end{figure}
+
+\subsection{The FEC policy outperforms FBA- and MM-derived exponent policies}
+
+To place FEC against familiar baselines we built two in-ROP comparison policies:
+an \emph{FBA-derived} policy (solve the FBA LP $\max\,\mathbf{1}^\top v$ s.t.\
+$Nv=0$, convert the optimal fluxes to exponents via $\log v/\log x$, then project
+onto the ROP) and a \emph{Michaelis--Menten--derived} policy (a saturating
+exponent heuristic, projected onto the ROP). Projecting both into the ROP is a
+deliberately \emph{conservative} choice: it removes any unfair advantage to FEC
+from feasibility alone, so the comparison isolates the quality of the chosen
+exponent. The cost is the L2 distance of the simulated final state to the target,
+averaged over $50$ runs. Table~\ref{tab:fbamm} and Figure~\ref{fig:fbamm} report
+the result: the FEC optimal-control policy attains the lowest cost ($1.01$),
+improving on the FBA-derived policy by $\sim\!1.27\times$ and the MM-derived
+policy by $\sim\!1.08\times$. The robust scenario policy (\S\ref{sec:robust})
+matches the nominal FEC cost while optimising worst-case rather than nominal
+performance.
+
+\begin{table}[t]
+\centering
+\caption{Final-state tracking cost (L2 to target; lower is better) over $50$
+runs on the toy network. All policies are projected into the ROP, so all are
+feasible; the difference reflects exponent quality only.}
+\label{tab:fbamm}
+\begin{tabular}{lcc}
+\toprule
+Policy & Mean cost & vs.\ FEC \\
+\midrule
+FBA-derived (in ROP)         & $1.283$ & $1.27\times$ worse \\
+MM-derived (in ROP)          & $1.090$ & $1.08\times$ worse \\
+\textbf{FEC / ROP (ours)}    & $\mathbf{1.011}$ & --- \\
+Robust scenario (\S\ref{sec:robust}) & $1.011$ & matches nominal \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.70\textwidth]{figures/fba_mm_error_reduction.png}
+\caption{Final-state tracking cost by policy (Table~\ref{tab:fbamm}). The
+ROP-constrained FEC policy attains the lowest cost; the FBA- and MM-derived
+policies are shown for reference and are themselves projected into the ROP.}
+\label{fig:fbamm}
+\end{figure}
+
+\subsection{Robustness and sensitivity}
+
+Under parameter uncertainty sampled from the digital twin
+($40$ parameter sets), the robust scenario formulation~\eqref{eq:robust} trades a
+negligible amount of nominal performance for a worst-case guarantee: the
+worst-case cost rises only from $1.008$ (nominal-optimal policy) to $1.011$
+(scenario-robust policy), i.e.\ the robust policy is barely more conservative on
+average yet bounds the adversarial scenario (Figure~\ref{fig:robust}). The
+log-derivative structure~\eqref{eq:logderiv} additionally provides a
+first-order sensitivity of cost to each exponent (Figure~\ref{fig:sens}),
+computed directly from the geometry rather than by finite differencing the
+dynamics.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/scenario_mpc_cost.png}
+\caption{Worst-case cost of the nominal vs.\ scenario-robust policy over
+Monte-Carlo parameter samples. The robust policy bounds the adversarial scenario
+at a small nominal cost.}
+\label{fig:robust}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/sensitivity_L_cost.png}
+\caption{Log-derivative sensitivity of the tracking cost to each reaction-order
+exponent, obtained from the ROP geometry (Eq.~\ref{eq:logderiv}).}
+\label{fig:sens}
+\end{figure}
+
+\subsection{End-to-end loop integrity}
+
+Running the full loop of Figure~\ref{fig:arch} on the toy network, every
+structural invariant holds: the applied exponent is in the ROP at every step,
+the published polyhedron matches the constructed one, the observer maintains a
+covariance, workflow checkpoints accumulate, governance violations are detected
+and counted, and the digital twin can replay the FEC-produced trajectory. In the
+multicellular setting, the resource policy blocks $100\%$ of consortium
+configurations that would exceed the carrying capacity, demonstrating that the
+governance layer is load-bearing rather than decorative.
+
+% =====================================================================
+\section{Discussion}\label{sec:discussion}
+% =====================================================================
+
+\paragraph{What \texttt{ropfec} adds.} Relative to the originating
+work~\citep{xiao2023fec,xiao2022thesis}, the contribution here is not the
+ROP/FEC theory but its realisation: an open, tested implementation that builds
+the polyhedron and solves the constrained optimal-control problem; a closed-loop
+integration that turns the predictor into a controller with estimation,
+robustness and governance; and robust/interval and multicellular extensions.
+Relative to FBA~\citep{orth2010fba}, the framework is dynamic rather than
+steady-state; relative to full Michaelis--Menten kinetic models, it requires only
+binding-derived order bounds rather than complete parameter identification.
+
+\paragraph{Limitations.} We are explicit about scope.
+(i)~\emph{In-silico only.} All evidence is computational; no wet-lab data are
+used and no kinetic parameters are identified from experiment. The ``ground
+truth'' is a synthetic in-ROP trajectory, so the results demonstrate the
+mechanism and the solver's behaviour, not empirical biological accuracy.
+(ii)~\emph{Single, small network.} Validation uses one $3$-species toy; scaling
+to genome-scale or multi-pathway networks (and the conditioning of the resulting
+NLP) is untested here.
+(iii)~\emph{Reference components.} The estimation, robustness, governance and
+workflow blocks are reference implementations behind the interfaces of
+\S\ref{sec:integration}, not a production deployment. (iv)~\emph{Baselines are
+illustrative.} The FBA- and MM-derived policies are reasonable but constructed
+comparators on a synthetic task, not a benchmark against published methods.
+
+\paragraph{Future work.} The natural next steps are experimental: identify a real
+binding-stoichiometry specification and rate measurements for a small pathway,
+build its ROP from data, and test FEC predictions against measured transients;
+replace the reference components with production observers and policy engines; and
+study NLP conditioning at larger network scale. The multicellular extension
+points toward consortium-level and, more speculatively, embodied applications;
+we regard those as an outlook rather than a result, and any quantitative figures
+in that direction would need to be fitted to real systems.
+
+% =====================================================================
+\section{Conclusion}
+% =====================================================================
+
+We presented \texttt{ropfec}, an open and reproducible implementation of
+reaction-order-polyhedron--constrained flux exponent control, together with a
+closed-loop integration, robust and multicellular extensions, and an in-silico
+validation. Enforcing the binding-derived polyhedron recovers synthetic
+ground-truth dynamics $\sim\!3.2\times$ better than violating it, and the FEC
+optimal-control policy outperforms FBA- and MM-derived exponent policies on a
+synthetic tracking task. The work is offered as a reproducible reference and a
+substrate for the experimental validation that should follow.
+
+% =====================================================================
+\section*{Code and data availability}
+% =====================================================================
+
+The \texttt{ropfec} source, tests, and the script that regenerates every figure
+and number in this paper will be released under an open-source license at
+\url{https://github.com/exergyleizhou-ux} and archived with a DOI on Zenodo upon
+submission. (Repository URL and Zenodo DOI to be finalised at submission.)
+
+% =====================================================================
+\section*{Declarations}
+% =====================================================================
+
+\paragraph{Use of AI tools.} Drafting of code and text for this work was
+assisted by AI tools (xAI Grok and Anthropic Claude). The author reviewed,
+verified, and is solely responsible for all content, including every quantitative
+claim and citation; the AI tools are not authors. All reported numbers were
+reproduced by the author from the released code.
+
+\paragraph{Competing interests.} The author declares no competing interests.
+
+\paragraph{Funding.} This research received no specific grant from funding
+agencies in the public, commercial, or not-for-profit sectors.
+
+\section*{Acknowledgments}
+
+This work implements and builds upon the reaction order polyhedron and flux
+exponent control framework of Fangzhou Xiao, Jing Shuang Li and John C. Doyle;
+their theory is the foundation of everything reported here.
+
+\bibliographystyle{unsrtnat}
+\bibliography{refs}
+
+\end{document}
