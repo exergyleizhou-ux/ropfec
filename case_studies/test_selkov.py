@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from selkov import (
+from case_studies.selkov import (
     PARAMS,
     PARAMS_FIXED_POINT,
     X0,
