@@ -29,6 +29,9 @@ This runs the 29-test suite and every example, writing figures to
 | End-to-end invariants all ok | `ok: True` | `examples/end_to_end_toy.py` / `correspondence_verification.py` |
 | 29 tests pass | 29 passed | `pytest -q` |
 | Multicell OPA block rate | 100% over-capacity | `correspondence_verification.py` |
+| Case-study oscillations (Selkov, Wolf-Heinrich) | sustained limit cycles | `case_studies/` (11 tests) |
+| Negative result: ROP vs data vs random order sets | informative 0.048/0.048/0.048; data-poor 2.80/2.34/2.42 | `experiments/order_uq_demo.py`, `experiments/make_paper_figs.py` |
+| 44 tests pass | 33 engine + 11 case-study | `pytest tests/` and `pytest case_studies/` |
 
 ## Figures used by the manuscript
 
