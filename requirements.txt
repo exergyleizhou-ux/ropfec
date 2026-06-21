@@ -1,0 +1,20 @@
+# BOS-BMAC Phase 0 (see docs/BOS-BMAC_Phase0_Spec_v1.0.tex Section 5)
+# Core (toy validation runs with zero of these)
+numpy>=1.24
+scipy>=1.10
+
+# For full FEC solver with real CasADi/IPOPT (recommended for production)
+# casadi>=3.6   # On mac often: pip install casadi  or download wheel from https://web.casadi.org/
+
+# Optional for exact polyhedra (H-rep)
+# pycddlib
+
+# For real BOS workflows/governance (instead of bos_platform stubs)
+# temporalio
+# opa-python
+
+# For trajectory plots in examples (end_to_end_toy etc.)
+# matplotlib
+
+# Dev
+# pytest

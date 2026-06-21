@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Scratch solver exports (timestamped run artifacts; keep curated ones only)
+examples/exports/alpha_seq_*.json
+
+# Local machine path pin (machine-specific)
+.bos_platform_path
