@@ -17,7 +17,7 @@ authors:
     email: exergyleizhou@gmail.com
 license: MIT
 repository-code: "https://github.com/exergyleizhou-ux/ropfec"
-version: 1.0.0
+version: 1.0.1
 keywords:
   - reproducible software
   - flux exponent control
