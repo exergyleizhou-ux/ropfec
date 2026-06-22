@@ -93,13 +93,14 @@ def fig_osc():
     t, X = selkov.simulate(); td, Xd = selkov.simulate(params=selkov.PARAMS_FIXED_POINT)
     ax[0].plot(t, X[:, 0], color=C["blue"], label="limit cycle")
     ax[0].plot(td, Xd[:, 0], color=C["grey"], ls="--", label="fixed point")
-    ax[0].set_xlim(0, 200); ax[0].set_xlabel("time"); ax[0].set_ylabel("$x$ (ADP)")
+    ax[0].set_xlim(0, 90); ax[0].set_xlabel("time"); ax[0].set_ylabel("$x$ (ADP)")
     ax[0].set_title("(a) Sel'kov 1968"); ax[0].legend(frameon=False)
     ax[0].spines[["top", "right"]].set_visible(False)
     tw, Xw = wh.simulate(); Xw = np.asarray(Xw)
     series = Xw[5] if Xw.shape[0] < Xw.shape[1] else Xw[:, 5]
     ax[1].plot(tw, series, color=C["green"], lw=1.0)
-    ax[1].set_xlabel("time"); ax[1].set_ylabel("$A_3$ (ATP)")
+    ax[1].set_xlim(40, 56)  # steady-state window so individual cycles resolve
+    ax[1].set_xlabel("time (steady-state window)"); ax[1].set_ylabel("$A_3$ (ATP)")
     ax[1].set_title("(b) Wolf--Heinrich 2000 (single-cell core)")
     ax[1].spines[["top", "right"]].set_visible(False)
     fig.subplots_adjust(wspace=0.28)
