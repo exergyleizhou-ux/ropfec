@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" class="in-text" default-locale="en-GB">
+  <info>
+    <title>Numeric (Vancouver-style, minimal)</title>
+    <id>numeric-vancouver-minimal</id>
+    <category citation-format="numeric"/>
+    <updated>2026-01-01T00:00:00+00:00</updated>
+  </info>
+  <locale xml:lang="en">
+    <terms>
+      <term name="et-al">et al.</term>
+      <term name="and">and</term>
+    </terms>
+  </locale>
+  <macro name="author">
+    <names variable="author" suffix=". ">
+      <name and="text" delimiter=", " delimiter-precedes-last="always"
+            initialize-with=". " name-as-sort-order="all"
+            et-al-min="9" et-al-use-first="6"/>
+      <substitute>
+        <names variable="editor"/>
+        <text macro="title-plain"/>
+      </substitute>
+    </names>
+  </macro>
+  <macro name="title-plain">
+    <text variable="title"/>
+  </macro>
+  <macro name="title">
+    <text variable="title" suffix=". "/>
+  </macro>
+  <macro name="container">
+    <group delimiter=", " suffix=". ">
+      <text variable="container-title"/>
+      <group delimiter=";">
+        <date variable="issued"><date-part name="year"/></date>
+        <group delimiter=":">
+          <text variable="volume"/>
+          <text variable="page"/>
+        </group>
+      </group>
+    </group>
+  </macro>
+  <macro name="publisher">
+    <group delimiter=", " suffix=". ">
+      <text variable="publisher"/>
+      <text variable="publisher-place"/>
+      <date variable="issued"><date-part name="year"/></date>
+    </group>
+  </macro>
+  <macro name="access">
+    <group delimiter=" ">
+      <text variable="DOI" prefix="doi:"/>
+      <text variable="URL"/>
+    </group>
+  </macro>
+  <citation collapse="citation-number">
+    <sort><key variable="citation-number"/></sort>
+    <layout prefix="[" suffix="]" delimiter=",">
+      <text variable="citation-number"/>
+    </layout>
+  </citation>
+  <bibliography second-field-align="flush" entry-spacing="0">
+    <sort><key variable="citation-number"/></sort>
+    <layout>
+      <text variable="citation-number" prefix="[" suffix="] "/>
+      <text macro="author"/>
+      <text macro="title"/>
+      <choose>
+        <if variable="container-title">
+          <text macro="container"/>
+        </if>
+        <else>
+          <text macro="publisher"/>
+        </else>
+      </choose>
+      <text macro="access"/>
+    </layout>
+  </bibliography>
+</style>
