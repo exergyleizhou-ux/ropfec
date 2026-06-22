@@ -144,28 +144,35 @@ def _regime(lo, hi, n, eps, seeds):
             dn.append(_order_unc(np.vstack([Ad, Ar]), np.concatenate([bd, br])))
         except Exception:
             pass
-    return np.mean(do), np.mean(dr), np.mean(dn)
+    return np.array(do), np.array(dr), np.array(dn)
 
 
 def fig_neg():
-    seeds = range(200, 215)
+    seeds = range(200, 260)  # 60 seeds
     inf = _regime(0.5, 3.0, 120, 0.06, seeds)
     poor = _regime(0.9, 1.15, 12, 0.06, seeds)
-    labels = ["data only", "data $\\cap$ ROP\n(mechanism)", "data $\\cap$ random\n(control)"]
-    x = np.arange(3); w = 0.36
-    fig, ax = plt.subplots(figsize=(6.4, 3.4))
-    ax.bar(x - w / 2, inf, w, label="informative data", color=C["blue"], edgecolor="black", linewidth=0.5)
-    ax.bar(x + w / 2, poor, w, label="data-poor", color=C["red"], edgecolor="black", linewidth=0.5)
-    for xi, (a, b) in enumerate(zip(inf, poor)):
-        ax.text(xi - w / 2, a + 0.04, f"{a:.2f}", ha="center", va="bottom", fontsize=6.6)
-        ax.text(xi + w / 2, b + 0.04, f"{b:.2f}", ha="center", va="bottom", fontsize=6.6)
-    ax.set_xticks(x); ax.set_xticklabels(labels)
-    ax.set_ylabel("total reaction-order uncertainty\n(sum of order ranges; lower = tighter)")
-    ax.set_title("Binding-derived ROP gives no advantage over a count-matched random set")
-    ax.legend(frameon=False); ax.spines[["top", "right"]].set_visible(False)
+    labels = ["data\nonly", "data $\\cap$ ROP\n(mechanism)", "data $\\cap$ random\n(control)"]
+    cols = [C["grey"], C["blue"], C["red"]]
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(7.2, 3.3))
+    for ax, reg, title in [(axL, inf, "(a) Informative data"), (axR, poor, "(b) Data-poor")]:
+        m = [r.mean() for r in reg]; sd = [r.std(ddof=1) for r in reg]
+        x = np.arange(3)
+        ax.bar(x, m, 0.6, yerr=sd, capsize=3, color=cols, edgecolor="black", linewidth=0.6)
+        for xi, (mi, si) in enumerate(zip(m, sd)):
+            ax.text(xi, mi + si + max(m) * 0.02, f"{mi:.3f}", ha="center", va="bottom", fontsize=6.8)
+        ax.set_xticks(x); ax.set_xticklabels(labels)
+        ax.set_title(title); ax.spines[["top", "right"]].set_visible(False)
+        ax.set_ylim(0, max(m) + max(sd) + max(m) * 0.22)
+    axL.set_ylabel("total reaction-order uncertainty\n(sum of order ranges; lower = tighter)")
+    pct = (poor[2].mean() - poor[1].mean()) / poor[0].mean() * 100
+    axR.text(0.5, 0.93, f"ROP $-$ random $\\approx${pct:.0f}%\n(within $\\pm${poor[1].std(ddof=1):.2f} scatter)",
+             transform=axR.transAxes, ha="center", va="top", fontsize=6.6, color=C["grey"])
+    fig.suptitle("Binding-derived ROP gives at most a marginal advantage over a random set",
+                 fontsize=8.5, fontweight="bold", y=1.0)
+    fig.subplots_adjust(wspace=0.30, top=0.85)
     _save(fig, "order_uq_negative")
-    print(f"    informative: data {inf[0]:.3f} / ROP {inf[1]:.3f} / random {inf[2]:.3f}")
-    print(f"    data-poor:   data {poor[0]:.3f} / ROP {poor[1]:.3f} / random {poor[2]:.3f}")
+    print(f"    informative: data {inf[0].mean():.3f} / ROP {inf[1].mean():.3f} / random {inf[2].mean():.3f}")
+    print(f"    data-poor:   data {poor[0].mean():.3f} / ROP {poor[1].mean():.3f}+-{poor[1].std(ddof=1):.3f} / random {poor[2].mean():.3f}+-{poor[2].std(ddof=1):.3f}")
 
 
 if __name__ == "__main__":

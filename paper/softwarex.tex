@@ -51,7 +51,7 @@ data figure and number reported here (the architecture is a separate schematic).
 results as first-class, re-runnable claims: a \emph{clarifying identity} ---  the exponents
 FEC controls are exactly the elasticity coefficients of metabolic control analysis (MCA)
 --- and a \emph{built-in falsification}: tested against a count-matched random-facet null,
-the binding-derived ROP does \emph{not} improve data-driven estimation of reaction orders.
+the binding-derived ROP does \emph{not materially} improve data-driven estimation of reaction orders.
 The transferable thesis is that reaction-order structure is a \emph{control-admissibility
 set, not an estimation prior}. \code{ropfec} is intended as the computational control layer for the
 staged ``Biological Operating System'' whose wet-lab decoupling result is reported
@@ -97,11 +97,11 @@ dynamics but require many poorly identifiable parameters~\citep{saa2017kinetic}.
 middle-ground frameworks include dynamic FBA~\citep{mahadevan2002dfba}, lin-log
 kinetics~\citep{hatzimanikatis1997loglinear,visser2003linlog}, and ensemble
 methods~\citep{miskovic2010oracle,smallbone2007bridging}. Xiao, Li and Doyle proposed
-another~\citep{xiao2023fec,xiao2022thesis}: in a power-law description the reaction-order
+another~\citep{xiao2023fec,xiao2022thesis,xiao2021structure,xiao2018rpa}: in a power-law description the reaction-order
 exponents are constrained by binding stoichiometry to a polytope, the \emph{reaction order
 polytope} (ROP), whose continuous analogue is the log-derivative of the rate; \emph{flux
 exponent control} (FEC) casts dynamic regulation as an optimal-control problem over the ROP,
-tractable by model predictive control~\citep{rawlings2017mpc}. Because the admissible
+tractable by model predictive control~\citep{rawlings2017mpc,bemporad1999survey}. Because the admissible
 exponents come from structure, FEC is \emph{proposed} to predict dynamics --- glycolytic oscillations
 being the motivating example --- without full parameter identification.
 
@@ -124,8 +124,8 @@ reproduction (\S\ref{sec:desc});
 variable physically interpretable: the controlled exponents are exactly metabolic-control-
 analysis elasticities (\S\ref{sec:desc});
 \item a \emph{built-in falsification}: a test that compares the binding-derived ROP against
-a count-matched random-facet null and finds it confers no advantage for data-driven order
-estimation (\S\ref{sec:examples}). Self-skepticism is shipped as a re-runnable feature, so
+a count-matched random-facet null and finds it confers at most a marginal advantage for
+data-driven order estimation (\S\ref{sec:examples}). Self-skepticism is shipped as a re-runnable feature, so
 the framework's scope is auditable rather than asserted.
 \end{itemize}
 All demonstrations are in-silico, on synthetic or published-model ground truth, with the
@@ -144,7 +144,7 @@ architecture and its mapping onto the three BOS stages. For a chemical reaction 
 species $x\in\mathbb{R}^n_{\ge0}$, stoichiometric matrix $N$, and power-law
 rates~\citep{feinberg2019crnt,alon2019systems},
 \begin{equation}
-v_r(x)=k_r\prod_{i=1}^{n}x_i^{\alpha_{r,i}},\quad \dot{x}=N\,v(x,\alpha),\qquad
+v_r(x,\alpha)=k_r\prod_{i=1}^{n}x_i^{\alpha_{r,i}},\quad \dot{x}=N\,v(x,\alpha),\qquad
 \rop\triangleq\{\alpha\mid A\alpha\le b,\ \alpha\ge0\},\quad
 \frac{\partial\log v_r}{\partial\log x_i}=\alpha_{r,i}.
 \label{eq:core}
@@ -230,8 +230,8 @@ trajectory error of $9.9\%$; the same exponent projected onto the ROP reduces it
 an in-ROP exponent that reproduces the prescribed ground-truth exponent to within $\sim2\%$ (a
 round-trip check that the transcription and solver are correct, not an identification result). On the
 same network the FEC solution yields a final-state tracking cost no worse than in-ROP FBA- and
-MM-derived exponent policies across 50 seeds ($1.01$ vs $1.28$ and $1.09$; all three respect the
-polytope), and a scenario-robust variant bounds the worst case at near-nominal cost --- internal
+MM-derived exponent policies ($1.01$ vs $1.28$ and $1.09$; a single deterministic evaluation,
+all three respecting the polytope), and a scenario-robust variant bounds the worst case at near-nominal cost --- internal
 sanity checks on synthetic ground truth, not a performance benchmark. \emph{This is a mechanism illustration, not a benchmark}: the
 ground truth is synthetic and the out-of-polytope baseline is, by construction, out of the
 polytope, so the example demonstrates that respecting the binding constraint lowers the
@@ -273,12 +273,14 @@ facet set calibrated to still contain the true orders --- a control for ``more f
 versus ``the right facets''~\citep{bental1998robust}. We measure total reaction-order
 uncertainty in an informative regime and a data-poor regime (Figure~\ref{fig:neg}).
 
-The result is negative. When data are informative the ROP is \emph{inactive}: the data,
-data$\cap$ROP, and data$\cap$random sets have identical order uncertainty
-($\approx0.048$) --- the data already constrain the orders more tightly than the ROP does,
-and its facets never bind. When data are scarce the ROP tightens the set only modestly
-($2.80\!\to\!2.34$) and \emph{no more than the count-matched random set} ($2.42$); across
-trials neither beats the other consistently. The interpretation is clarifying rather than
+The result is negative in substance. When data are informative the ROP is \emph{inactive}:
+data, data$\cap$ROP, and data$\cap$random sets have identical order uncertainty
+($\approx0.04$), so the data already constrain the orders more tightly than the ROP and its
+facets never bind. When data are scarce both the ROP and the count-matched random null
+tighten the set substantially below data-only ($2.72$), to $2.31$ and $2.34$ respectively
+(60 seeds) --- a difference of only $\sim$1\% that lies well within the cross-seed scatter
+($\pm0.58$). The binding-derived structure therefore adds little to identification beyond a
+generic constraint of equal size. The interpretation is clarifying rather than
 discouraging, and it is the package's transferable thesis: the value of ROP/FEC is as a
 structural \emph{control-admissibility set} --- the geometry the controller must respect
 (example~1) --- \emph{not} as a statistical regulariser for \emph{identification}. Structure
@@ -290,12 +292,14 @@ multicellular policy rejects every over-capacity configuration in the test suite
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.74\linewidth]{order_uq_negative.pdf}
-\caption{Built-in falsification (the package's central result). Total reaction-order
-uncertainty for the data-only set, data$\cap$ROP, and data$\cap$random (count-matched,
-truth-covering) sets, in an informative and a data-poor regime. The binding-derived ROP
-confers no advantage over a random set of equal size: when data are informative it is
-inactive; when data are scarce it is no better than chance. Shipped as a re-runnable test.}
+\includegraphics[width=\linewidth]{order_uq_negative.pdf}
+\caption{Built-in falsification (the package's central result; mean $\pm$ SD over 60 seeds).
+Total reaction-order uncertainty for the data-only set, data$\cap$ROP, and data$\cap$random
+(count-matched, truth-covering) sets, on independent scales for (a)~an informative and
+(b)~a data-poor regime. The binding-derived ROP confers at most a marginal advantage over a
+random set of equal size: when data are informative it is inactive (all three $\approx0.04$);
+when data are scarce it tightens the set only $\sim$1\% more than the random null
+(2.31 vs 2.34), well within the cross-seed scatter. Shipped as a re-runnable test.}
 \label{fig:neg}
 \end{figure}
 
