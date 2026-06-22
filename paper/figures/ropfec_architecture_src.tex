@@ -24,6 +24,6 @@
 \draw[->] (est.north) -- (fec.south);
 \draw[->] (mc.north) -- (fec.south east);
 \draw[->] (act.south) |- ([yshift=-3mm]sense.south) -| (sense.south);
-\draw[->] (rop.south) |- (opa.north west);
+\draw[->] (rop.north) -- ++(0,4mm) -| (opa.north);
 \end{tikzpicture}
 \end{document}

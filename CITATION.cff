@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ropfec: reaction-order-polytope flux-exponent control for staged bioconversion"
+abstract: >-
+  An open, tested Python implementation of reaction-order-polytope (ROP) geometry
+  and flux-exponent control (FEC) for staged bioconversion, with a built-in
+  falsification: against a count-matched random-facet null the binding-derived
+  structural prior confers at most a marginal advantage for data-driven order
+  estimation, so its demonstrated role is as a control-admissibility set rather
+  than an estimation prior. All demonstrations are in-silico.
+type: software
+authors:
+  - family-names: Zhou
+    given-names: Lei
+    orcid: "https://orcid.org/0009-0000-9073-1349"
+    affiliation: "State Key Laboratory of Subtropical Silviculture, Zhejiang A&F University"
+    email: exergyleizhou@gmail.com
+license: MIT
+repository-code: "https://github.com/exergyleizhou-ux/ropfec"
+version: 1.0.0
+keywords:
+  - reproducible software
+  - flux exponent control
+  - reaction order polytope
+  - metabolic control analysis
+  - optimal control
+  - staged bioconversion

@@ -33,10 +33,10 @@ PYTHONPATH=. python3 paper/make_softwarex_figs.py
 |---|---|---|
 | Figure 1 (architecture) | `figures/ropfec_architecture.pdf` (TikZ) | schematic |
 | Figure 2 (toy mechanism) | `make_softwarex_figs.py::fig_toy` | 9.9% (out-of-ROP) vs 3.1% (ROP) |
-| Example 1 tracking costs | `bmac_engine/benchmarks.py` | FEC 1.01; FBA 1.28; MM 1.09 |
+| Example 1 tracking costs | `examples/correspondence_verification.py` | FEC 1.01; FBA 1.28; MM 1.09 |
 | FEC round-trip exponent | `examples/numerical_toy_validation.py` | within ~2% of the prescribed orders |
 | Figure 3 (oscillators) | `make_softwarex_figs.py::fig_osc` | Sel'kov + Wolf--Heinrich dynamics |
-| Figure 4 (negative result) | `make_softwarex_figs.py::fig_neg` | informative 0.05/0.05/0.05; data-poor 2.80/2.34/2.41 |
+| Figure 4 (negative result) | `make_softwarex_figs.py::fig_neg` | informative 0.04/0.04/0.04; data-poor 2.72/2.31/2.34 |
 
 ## Build the manuscript
 

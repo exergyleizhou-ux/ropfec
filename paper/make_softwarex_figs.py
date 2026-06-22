@@ -81,7 +81,7 @@ def fig_toy():
     ax.plot(t, r[:, 2], color=C["green"], lw=1.4, ls=":",
             label=f"ROP-projected / FEC ({err_rop:.1f}% err)")
     ax.set_xlabel("time"); ax.set_ylabel("pyruvate  $x_3$")
-    ax.set_title("ROP constraint recovers the dynamics (mechanism)")
+    ax.set_title("ROP constraint lowers synthetic-trajectory error (mechanism)")
     ax.legend(frameon=False, loc="upper right")
     ax.spines[["top", "right"]].set_visible(False)
     _save(fig, "toy_traj_comparison")
@@ -101,7 +101,7 @@ def fig_osc():
     ax[1].plot(tw, series, color=C["green"], lw=1.0)
     ax[1].set_xlim(40, 56)  # steady-state window so individual cycles resolve
     ax[1].set_xlabel("time (steady-state window)"); ax[1].set_ylabel("$A_3$ (ATP)")
-    ax[1].set_title("(b) Wolf--Heinrich 2000 (single-cell core)")
+    ax[1].set_title("(b) Wolf–Heinrich 2000 (single-cell core)")
     ax[1].spines[["top", "right"]].set_visible(False)
     fig.subplots_adjust(wspace=0.28)
     _save(fig, "case_studies_oscillations")
@@ -166,7 +166,7 @@ def fig_neg():
         ax.set_ylim(0, max(m) + max(sd) + max(m) * 0.22)
     axL.set_ylabel("total reaction-order uncertainty\n(sum of order ranges; lower = tighter)")
     pct = (poor[2].mean() - poor[1].mean()) / poor[0].mean() * 100
-    axR.text(0.5, 0.93, f"ROP $-$ random $\\approx${pct:.0f}%\n(within $\\pm${poor[1].std(ddof=1):.2f} scatter)",
+    axR.text(0.5, 0.93, f"ROP $\\approx$ random ($\\sim${abs(pct):.0f}% diff, not significant)",
              transform=axR.transAxes, ha="center", va="top", fontsize=6.6, color=C["grey"])
     fig.suptitle("Binding-derived ROP gives at most a marginal advantage over a random set",
                  fontsize=8.5, fontweight="bold", y=1.0)
