@@ -21,7 +21,7 @@
 \newcommand{\rop}{\mathrm{ROP}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{\textbf{\code{ropfec}: a tested, reproducible implementation of
+\title{\textbf{\texttt{ropfec}: a tested, reproducible implementation of
 reaction-order-constrained flux-exponent control for staged bioconversion,
 with a built-in falsification of structural priors}}
 
@@ -40,7 +40,7 @@ Reaction-order-polytope (ROP) geometry and flux-exponent control (FEC) claim tha
 dynamics of a metabolic network can be regulated from binding structure, and predicted
 without full kinetic-parameter identification --- an attractive but, as we show below, only
 partly supported idea for controlling staged bioconversion, and one that has existed as theory and a model-predictive-control
-concept without an open, tested implementation. We present \code{ropfec}, a small,
+concept without an open, tested implementation. We present \texttt{ropfec}, a small,
 test-anchored Python package that makes the framework runnable and testable:
 H-representation construction of the ROP, ROP-constrained FEC as a CasADi/IPOPT
 optimal-control problem, interval/robust and multicellular extensions, a data-driven
@@ -53,7 +53,7 @@ FEC controls are exactly the elasticity coefficients of metabolic control analys
 --- and a \emph{built-in falsification}: tested against a count-matched random-facet null,
 the binding-derived ROP does \emph{not} improve data-driven estimation of reaction orders.
 The transferable thesis is that reaction-order structure is a \emph{control-admissibility
-set, not an estimation prior}. \code{ropfec} is intended as the computational control layer for the
+set, not an estimation prior}. \texttt{ropfec} is intended as the computational control layer for the
 staged ``Biological Operating System'' whose wet-lab decoupling result is reported
 separately; all demonstrations here are in-silico with reference components and published
 or synthetic ground truth.
@@ -80,7 +80,7 @@ C4 Legal code license & MIT \\
 C5 Code versioning system used & git \\
 C6 Software languages, tools, services & Python~3.9+, NumPy, SciPy, CasADi/IPOPT, Matplotlib, pytest \\
 C7 Compilation/runtime requirements \& dependencies & Python~$\ge$3.9; NumPy, SciPy, Matplotlib; CasADi+IPOPT optional (SciPy projection fallback otherwise) \\
-C8 Developer documentation/manual & repository \code{README} + module docstrings \\
+C8 Developer documentation/manual & repository \texttt{README} + module docstrings \\
 C9 Support email & \href{mailto:exergyleizhou@gmail.com}{exergyleizhou@gmail.com} \\
 \bottomrule
 \end{tabular}
@@ -111,7 +111,7 @@ recovery stage linked by a declared chemical handover --- the ``Biological Opera
 System'' (BOS) pattern whose wet-lab resource-recovery result is reported
 separately~\citep{paperA}. To be used, built upon, and trusted in that setting, the
 framework needs two things it did not have: \textbf{(i)}~an open, tested implementation, and
-\textbf{(ii)}~an honest account of where its structural prior actually helps. \code{ropfec}
+\textbf{(ii)}~an honest account of where its structural prior actually helps. \texttt{ropfec}
 supplies both. No novel scientific result is claimed: ROP, FEC and the log-derivative geometry are the prior work of
 Xiao and colleagues; the contribution is the open, tested, reproducible implementation and the honest
 map around it, not a new method:
@@ -119,13 +119,13 @@ and we are deliberately conservative about novelty. Concretely the package provi
 \begin{itemize}\setlength\itemsep{1pt}
 \item a tested reference implementation of ROP construction and ROP-constrained FEC, with
 robust/interval, multicellular, and data-driven-uncertainty modules, and a one-command
-reproduction (\S\ref{sec:desc});
+reproduction (Section 2);
 \item the \emph{MCA-elasticity identity} as a design contract that keeps the control
 variable physically interpretable: the controlled exponents are exactly metabolic-control-
-analysis elasticities (\S\ref{sec:desc});
+analysis elasticities (Section 2);
 \item a \emph{built-in falsification}: a test that compares the binding-derived ROP against
 a count-matched random-facet null and finds it confers no advantage for data-driven order
-estimation (\S\ref{sec:examples}). Self-skepticism is shipped as a re-runnable feature, so
+estimation (Section 3). Self-skepticism is shipped as a re-runnable feature, so
 the framework's scope is auditable rather than asserted.
 \end{itemize}
 All demonstrations are in-silico, on synthetic or published-model ground truth, with the
@@ -138,8 +138,8 @@ software contribution this scope is the point, not a limitation.
 % =====================================================================
 
 \subsection{Software architecture}
-\code{ropfec} is a small Python package (NumPy/SciPy, with optional CasADi/IPOPT) organized
-around the constructs below; Figure~\ref{fig:arch} shows the closed-loop \emph{reference}
+\texttt{ropfec} is a small Python package (NumPy/SciPy, with optional CasADi/IPOPT) organized
+around the constructs below; Figure~1 shows the closed-loop \emph{reference}
 architecture and its mapping onto the three BOS stages. For a chemical reaction network with
 species $x\in\mathbb{R}^n_{\ge0}$, stoichiometric matrix $N$, and power-law
 rates~\citep{feinberg2019crnt,alon2019systems},
@@ -165,33 +165,33 @@ of FEC's control variable is the small clarifying point, not a theorem.
 
 \subsection{Software functionalities}
 \begin{itemize}\setlength\itemsep{1pt}
-\item \code{rop\_polyhedron.py} --- builds the H-representation $A\alpha\le b$ from binding
+\item \texttt{rop\_polyhedron.py} --- builds the H-representation $A\alpha\le b$ from binding
 stoichiometry (optionally augmented with data-driven bounds from log-linear regression of
 measured rates), and exposes feasibility, Euclidean projection $\Pi_{\rop}$, and the
 log-derivative matrix.
-\item \code{fec\_solver.py} --- transcribes the FEC optimal-control problem into an NLP
+\item \texttt{fec\_solver.py} --- transcribes the FEC optimal-control problem into an NLP
 (dynamics integrated over a horizon, ROP membership imposed as the linear constraint
 $A\alpha\le b$, objective tracking a reference flux), built with
 CasADi~\citep{andersson2019casadi} and solved with IPOPT~\citep{wachter2006ipopt}; a SciPy
 projection fallback runs when IPOPT is absent.
-\item \code{robust\_extension.py} --- an interval ROP and a sampled min--max scenario robust
+\item \texttt{robust\_extension.py} --- an interval ROP and a sampled min--max scenario robust
 FEC over a digital-twin uncertainty set, using standard robust/scenario MPC
 machinery~\citep{kothare1996robust,scokaert1998minmax,mayne2005tube,calafiore2006scenario,campi2008exact,bertsimas2011robust}.
-\item \code{multicell\_agent.py} --- scales the loop to a consortium coupled by a quorum
+\item \texttt{multicell\_agent.py} --- scales the loop to a consortium coupled by a quorum
 signal with a population-level resource policy.
-\item \code{order\_uncertainty.py} --- from noisy $(x,v)$ data builds the bounded-error
+\item \texttt{order\_uncertainty.py} --- from noisy $(x,v)$ data builds the bounded-error
 data-consistent order polytope, intersects it with the ROP or with a random facet set, and
 measures the worst-case spread of any linear functional; this drives the falsification in
-\S\ref{sec:examples}.
-\item \code{bos\_integration.py} --- narrow interfaces (estimation, robustness, governance,
+Section 3.
+\item \texttt{bos\_integration.py} --- narrow interfaces (estimation, robustness, governance,
 durable workflow, digital twin) with shipped \emph{reference} implementations so the loop
 runs end to end; these are deliberately swappable, not a production deployment.
-\item \code{case\_studies/} --- validated re-implementations of the two-variable Sel'kov
+\item \texttt{case\_studies/} --- validated re-implementations of the two-variable Sel'kov
 model~\citep{selkov1968} and the single-cell core of the Wolf--Heinrich yeast
 model~\citep{wolf2000}, in pure NumPy/SciPy with tests asserting the known limit-cycle
 behaviour; reusable testbeds for the FEC pipeline.
 \end{itemize}
-\code{ropfec} runs on Python~3.9+ with fixed seeds for randomized components. A suite of 44
+\texttt{ropfec} runs on Python~3.9+ with fixed seeds for randomized components. A suite of 44
 automated tests (33 engine + 11 case-study) covers ROP construction/projection, the FEC
 solver (CasADi path and fallback), the robust and multicellular extensions, the
 order-uncertainty machinery, numerical stability, the end-to-end loop invariants, and the
@@ -204,9 +204,8 @@ and number below. Installation and reproduction are environment-agnostic:
 \end{verbatim}
 
 \begin{figure}[t]
-\centering
-\includegraphics[width=0.96\linewidth]{ropfec_architecture.pdf}
-\caption{Closed-loop \emph{reference} architecture implemented by \code{ropfec}. The ROP is
+\includegraphics[width=16cm]{figures/ropfec_architecture.png}
+\caption{\textbf{Figure 1.} Closed-loop \emph{reference} architecture implemented by \texttt{ropfec}. The ROP is
 built once from binding stoichiometry and data and supplies hard constraints to the FEC
 optimal-control problem and the governance check; the estimation, robustness, governance and
 workflow blocks are reference implementations, not a production platform. The loop is
@@ -226,7 +225,7 @@ to a script in the repository.
 On a $3$-species, $4$-reaction glycolysis-like toy network (the Xiao running example) with a
 six-facet binding-derived ROP, an exponent placed \emph{outside} the polytope gives a mean
 trajectory error of $9.9\%$; the same exponent projected onto the ROP reduces it to $3.1\%$
-(Figure~\ref{fig:toy}), and the FEC solver, tracking a target flux, converges to
+(Figure~2), and the FEC solver, tracking a target flux, converges to
 an in-ROP exponent that reproduces the prescribed ground-truth exponent to within $\sim2\%$ (a
 round-trip check that the transcription and solver are correct, not an identification result). On the
 same network the FEC solution yields a final-state tracking cost no worse than in-ROP FBA- and
@@ -238,9 +237,8 @@ polytope, so the example demonstrates that respecting the binding constraint low
 synthetic-trajectory error, not empirical accuracy on biological data.
 
 \begin{figure}[t]
-\centering
-\includegraphics[width=0.74\linewidth]{toy_traj_comparison.pdf}
-\caption{Mechanism illustration (in-silico): a state trajectory under the ground-truth
+\includegraphics[width=12cm]{figures/toy_traj_comparison.png}
+\caption{\textbf{Figure 2.} Mechanism illustration (in-silico): a state trajectory under the ground-truth
 exponent, an unconstrained exponent that violates the ROP, and the ROP-projected/FEC
 exponent. Respecting the binding-derived polytope lowers the synthetic-trajectory error (mean
 $3.1\%$ vs $9.9\%$). Synthetic ground truth; not a biological benchmark.}
@@ -248,16 +246,15 @@ $3.1\%$ vs $9.9\%$). Synthetic ground truth; not a biological benchmark.}
 \end{figure}
 
 \paragraph{(2) Validated oscillator testbeds.} The Sel'kov and Wolf--Heinrich
-re-implementations reproduce the published qualitative behaviour (Figure~\ref{fig:osc}):
+re-implementations reproduce the published qualitative behaviour (Figure~3):
 Sel'kov settles onto a stable limit cycle inside its Hopf window and to a fixed point
 outside it, and the Wolf--Heinrich single-cell core sustains glycolytic oscillations. Both
 are asserted by tests and serve as reusable, citable testbeds for the FEC pipeline beyond
 the toy network.
 
 \begin{figure}[t]
-\centering
-\includegraphics[width=0.96\linewidth]{case_studies_oscillations.pdf}
-\caption{Validated re-implementations of two published glycolytic oscillators:
+\includegraphics[width=16cm]{figures/case_studies_oscillations.png}
+\caption{\textbf{Figure 3.} Validated re-implementations of two published glycolytic oscillators:
 (a)~Sel'kov 1968 (limit cycle vs.\ damped fixed point); (b)~Wolf--Heinrich 2000 single-cell
 core (sustained oscillation of an ATP-like cofactor). Tested against the published dynamics.}
 \label{fig:osc}
@@ -271,7 +268,7 @@ bounded-error order set and compare three feasible sets: the data set alone, the
 intersected with the ROP, and the data set intersected with a \emph{count-matched random}
 facet set calibrated to still contain the true orders --- a control for ``more facets''
 versus ``the right facets''~\citep{bental1998robust}. We measure total reaction-order
-uncertainty in an informative regime and a data-poor regime (Figure~\ref{fig:neg}).
+uncertainty in an informative regime and a data-poor regime (Figure~4).
 
 The result is negative. When data are informative the ROP is \emph{inactive}: the data,
 data$\cap$ROP, and data$\cap$random sets have identical order uncertainty
@@ -289,9 +286,8 @@ constructed one, governance violations are detected and counted, and the referen
 multicellular policy rejects every over-capacity configuration in the test suite by its admission threshold.
 
 \begin{figure}[t]
-\centering
-\includegraphics[width=0.74\linewidth]{order_uq_negative.pdf}
-\caption{Built-in falsification (the package's central result). Total reaction-order
+\includegraphics[width=12cm]{figures/order_uq_negative.png}
+\caption{\textbf{Figure 4.} Built-in falsification (the package's central result). Total reaction-order
 uncertainty for the data-only set, data$\cap$ROP, and data$\cap$random (count-matched,
 truth-covering) sets, in an informative and a data-poor regime. The binding-derived ROP
 confers no advantage over a random set of equal size: when data are informative it is
@@ -302,7 +298,7 @@ inactive; when data are scarce it is no better than chance. Shipped as a re-runn
 % =====================================================================
 \section{Impact}
 % =====================================================================
-\code{ropfec} provides an open, tested, citable implementation of a control framework
+\texttt{ropfec} provides an open, tested, citable implementation of a control framework
 previously available mainly as theory and a model-predictive-control concept, with three concrete uses. \textbf{As infrastructure}, it is a reproducible
 substrate for staged-bioconversion control research: the ROP/FEC core, the robust and
 multicellular extensions, and the swappable reference loop let others prototype controllers
@@ -316,14 +312,14 @@ beyond a generic constraint of equal size, and reports the honest answer for thi
 (it does not). By shipping self-skepticism as a test, the package makes the scope of the
 framework auditable, which we regard as the responsible default for software that
 operationalizes an attractive but unproven idea. Within the broader BOS software
-ecosystem~\citep{paperA}, \code{ropfec} provides the candidate control-geometry layer; the empirical
+ecosystem~\citep{paperA}, \texttt{ropfec} provides the candidate control-geometry layer; the empirical
 resource-recovery results and the boundary-matched accounting are reported and reproduced
 separately.
 
 % =====================================================================
 \section{Conclusions}
 % =====================================================================
-We presented \code{ropfec}, an open, tested, one-command-reproducible implementation of
+We presented \texttt{ropfec}, an open, tested, one-command-reproducible implementation of
 reaction-order-polytope-constrained flux-exponent control for staged bioconversion. Beyond
 the artifact, the package encodes two honest, re-runnable results: the clarifying identity
 that FEC exponents are MCA elasticities, and a built-in falsification showing that the
@@ -335,9 +331,9 @@ system reported separately~\citep{paperA}.
 % =====================================================================
 \section*{Declarations}
 % =====================================================================
-\paragraph{Code and data availability.} The \code{ropfec} source, the 44 tests, and the
+\paragraph{Code and data availability.} The \texttt{ropfec} source, the 44 tests, and the
 script that regenerates every figure and number will be released under the MIT license and
-archived with a DOI on Zenodo upon posting (Table~\ref{tab:meta}).
+archived with a DOI on Zenodo upon posting (Table~1).
 \paragraph{Use of generative AI.} Generative-AI tools assisted code and text drafting; the
 author reviewed, verified, and is solely responsible for all content, including every
 quantitative claim and citation, and reproduced all reported numbers from the released code.
@@ -349,6 +345,5 @@ public, commercial, or not-for-profit sectors.
 This work implements and builds upon the reaction order polytope and flux exponent control
 framework of Fangzhou Xiao, Jing Shuang Li, and John C. Doyle.
 
-\bibliographystyle{unsrtnat}
-\bibliography{refs}
+\section*{References}
 \end{document}

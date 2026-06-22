@@ -1,48 +1,45 @@
-# Reproducing the `ropfec` paper
+# Reproducing the `ropfec` SoftwareX paper (`softwarex.tex`)
 
-Every number and figure in `ropfec.tex` is regenerated from the engine. No value
-is hand-entered.
+Every number and data figure in `softwarex.tex` is regenerated from the engine.
+No value is hand-entered. License: MIT (see top-level `LICENSE`).
 
 ## Environment
 
-- Python 3.9 with `numpy`, `scipy`, `casadi`, `matplotlib` (see `requirements.txt`).
-- Verified on macOS (Apple Silicon), 2026-06-21.
+- Python 3.9+ with `numpy`, `scipy`, `matplotlib`, `pytest` (see `requirements.txt`).
+- `casadi` + IPOPT are optional; without them the FEC solver uses a SciPy projection
+  fallback (the toy and negative-result numbers do not require IPOPT).
 
-## One command (tests + all figures/numbers)
-
-```bash
-cd ..              # repo root (bos-bmac)
-PYTHONPATH=. python3 examples/run_all.py
+```
+pip install -e .          # or: pip install -r requirements.txt
 ```
 
-This runs the 29-test suite and every example, writing figures to
-`examples/figures/` (copied into `paper/figures/` for the manuscript).
+## Tests (44 total: 33 engine + 11 case-study)
 
-## Mapping: paper claim -> source
+```
+PYTHONPATH=. pytest -q tests/ case_studies/
+```
 
-| Paper claim | Value | Source |
+## Data figures and numbers
+
+One command regenerates the three **data** figures and prints the numbers used in
+the paper (Figure 1, the architecture, is a TikZ schematic compiled with the
+manuscript, not a data figure):
+
+```
+PYTHONPATH=. python3 paper/make_softwarex_figs.py
+```
+
+| Manuscript item | Source | Value(s) |
 |---|---|---|
-| ROP enforce vs violate, trajectory error | 3.1% vs 9.9% (~3.2x) | `examples/numerical_toy_validation.py` |
-| FEC solver admissible alpha, final-state err | [0.6,0.84,1.62], 0.0054 | `examples/numerical_toy_validation.py` |
-| FBA/MM/FEC/scenario final-state cost (50 runs) | 1.283 / 1.090 / 1.011 / 1.011 | `bmac_engine/benchmarks.py::run_fba_mm_benchmark` -> `paper/figures/fba_mm_error_reduction.csv` |
-| Robust worst-case nominal vs scenario | 1.008 vs 1.011 | `paper/figures/scenario_mpc_cost.csv` |
-| End-to-end invariants all ok | `ok: True` | `examples/end_to_end_toy.py` / `correspondence_verification.py` |
-| 29 tests pass | 29 passed | `pytest -q` |
-| Multicell OPA block rate | 100% over-capacity | `correspondence_verification.py` |
-| Case-study oscillations (Selkov, Wolf-Heinrich) | sustained limit cycles | `case_studies/` (11 tests) |
-| Negative result: ROP vs data vs random order sets | informative 0.048/0.048/0.048; data-poor 2.80/2.34/2.42 | `experiments/order_uq_demo.py`, `experiments/make_paper_figs.py` |
-| 44 tests pass | 33 engine + 11 case-study | `pytest tests/` and `pytest case_studies/` |
+| Figure 1 (architecture) | `figures/ropfec_architecture.pdf` (TikZ) | schematic |
+| Figure 2 (toy mechanism) | `make_softwarex_figs.py::fig_toy` | 9.9% (out-of-ROP) vs 3.1% (ROP) |
+| Example 1 tracking costs | `bmac_engine/benchmarks.py` | FEC 1.01; FBA 1.28; MM 1.09 |
+| FEC round-trip exponent | `examples/numerical_toy_validation.py` | within ~2% of the prescribed orders |
+| Figure 3 (oscillators) | `make_softwarex_figs.py::fig_osc` | Sel'kov + Wolf--Heinrich dynamics |
+| Figure 4 (negative result) | `make_softwarex_figs.py::fig_neg` | informative 0.05/0.05/0.05; data-poor 2.80/2.34/2.41 |
 
-## Figures used by the manuscript
+## Build the manuscript
 
-`paper/figures/`: `toy_traj_comparison.png` (Fig 2), `fba_mm_error_reduction.png`
-(Fig 3), `scenario_mpc_cost.png` (Fig 4), `sensitivity_L_cost.png` (Fig 5).
-Figure 1 is a TikZ schematic compiled from `ropfec.tex`.
-
-## Build the PDF
-
-```bash
-cd paper
-tectonic ropfec.tex     # XeTeX engine; runs bibtex automatically
-# or:  latexmk -pdf ropfec.tex   (with a full TeX install)
+```
+tectonic paper/softwarex.tex
 ```
