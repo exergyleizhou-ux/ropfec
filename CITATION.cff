@@ -17,6 +17,7 @@ authors:
     email: exergyleizhou@gmail.com
 license: MIT
 repository-code: "https://github.com/exergyleizhou-ux/ropfec"
+doi: "10.5281/zenodo.20805373"
 version: 1.0.1
 keywords:
   - reproducible software
